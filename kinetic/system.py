@@ -119,15 +119,14 @@ class system:
 		self.evolve()
 		for i in range(len(self.gases)):
 			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
-		print("n = %8d"%self.n)
-		print("t = %8.3f"%self.t)
-		print(flush=True)
+		print("\rn = %8d, t = %8.3f"%(self.n,self.t), end="", flush=True)
 		plt.pause(self.dt/rate)
 
 	def live(self,rate=100):
 		self.newfig()
 		while plt.fignum_exists(self.fig.number):
 			self.update(rate)
+		print(flush=True)
 
 
 

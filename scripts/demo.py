@@ -3,10 +3,11 @@ import kinetic as kin
 
 
 params = dict(
-	dt=0.01, 
+	##
+	dt=0.01,
 	mu=0.99, 
 	N=100, 
-	Nhc=50, 
+	Nhc=10, 
 	r0=0.005, 
 	rhc=0.02, 
 	g=1, 
@@ -15,7 +16,7 @@ params = dict(
 	)
 
 sys = kin.hotcold(**params)
-sys.live(rate=2)
+sys.live(rate=200)
 
 
 
