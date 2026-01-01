@@ -78,6 +78,7 @@ class species:
 		self.free(dt/2)
 
 
+
 class system:
 
 	def __init__(self, dt=0.1):
@@ -123,7 +124,10 @@ class system:
 		print(flush=True)
 		plt.pause(self.dt/rate)
 
-
+	def live(self,rate=100):
+		self.newfig()
+		while plt.fignum_exists(self.fig.number):
+			self.update(rate)
 
 
 
