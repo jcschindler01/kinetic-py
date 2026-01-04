@@ -20,7 +20,7 @@ class species:
 		self.m  = 1.*m
 		self.r0 = 1.*r0
 		self.g  = 1.*g
-		self.sty = dict(c="k", marker="o", ms=4, ls="none", markeredgewidth=0)
+		self.sty = dict(c="k", marker="o", ls="none", markeredgewidth=0)
 		self.sty.update(sty)
 		self.walls = dict(l=0.,r=1.,b=0.,t=100.)
 		self.walls.update(walls)
@@ -121,7 +121,7 @@ class system:
 		plt.plot([1,1,1.5,1.5,1.5],[1,0,0,1,4], 'k-')		
 		plt.plot([0,0,-.5,-.5,-.5],[1,0,0,1,4], 'k-')		
 		for gas in self.gases:
-			gdat += list(ax.plot(gas.xy[0], gas.xy[1], **gas.sty))
+			gdat += list(ax.plot(gas.xy[0], gas.xy[1], ms=gms(ax,gas.r0), **gas.sty))
 		plt.show(block=False)
 		self.fig, self.ax, self.gdat = fig, ax, gdat
 
@@ -129,6 +129,7 @@ class system:
 		self.evolve()
 		for i in range(len(self.gases)):
 			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
+			self.gdat[i].set_markersize(gms(self.ax,self.gases[i].r0))
 		print("\rn = %8d, t = %8.3f, T = (%6.2f, %6.2f, %6.2f)"%(self.n,self.t,self.gases[0].T(),self.gases[1].T(),self.gases[2].T()), end="", flush=True)
 		plt.pause(self.dt/rate)
 

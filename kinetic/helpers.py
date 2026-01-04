@@ -24,4 +24,6 @@ isnum = lambda x: type(x) in [float,int]
 
 alpha = lambda g,d=2: d/2.+1. if 1.*g>0. else d/2. 
 
+gms = lambda ax,r0: 2.*r0*(72./ax.figure.dpi)*ax.get_window_extent().width/(ax.get_xlim()[1]-ax.get_xlim()[0])
+
 
