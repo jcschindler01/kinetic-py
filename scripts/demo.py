@@ -4,10 +4,10 @@ import kinetic as kin
 
 params = dict(
 	##
-	dt=0.01,
-	mu=0.99, 
-	N=100, 
-	Nhc=10, 
+	dt=0.02,
+	mu=0.8, 
+	N=500, 
+	Nhc=150, 
 	r0=0.005, 
 	rhc=0.02, 
 	g=1, 

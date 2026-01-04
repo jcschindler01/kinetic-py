@@ -27,7 +27,7 @@ class species:
 		self.xy  = np.zeros((2, self.N))
 		self.vxy = np.zeros((2, self.N))
 
-	def energy(self):
+	def energies(self):
 		kin = np.sum(0.5*self.m*self.vxy**2)
 		pot = np.sum(self.m*self.g*self.xy[1])
 		tot = pot + kin
@@ -77,6 +77,16 @@ class species:
 		self.wall()
 		self.free(dt/2)
 
+	def E(self):
+		kin = np.sum(0.5*self.m*self.vxy**2)
+		pot = np.sum(self.m*self.g*self.xy[1])
+		tot = pot + kin
+		return tot
+
+	def T(self):
+		return self.E()/(self.N*alpha(self.g))
+
+
 
 
 class system:
@@ -99,8 +109,8 @@ class system:
 
 	def newfig(self):
 		plt.ion()
-		fig = plt.figure(figsize=(6,6))
-		ax = plt.axes([0,0,1,1])
+		fig = plt.figure(figsize=(10,8))
+		ax = plt.axes([0,0,.6,1])
 		plt.xticks([])
 		plt.yticks([])
 		plt.xlim(-1,2)
@@ -119,7 +129,7 @@ class system:
 		self.evolve()
 		for i in range(len(self.gases)):
 			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
-		print("\rn = %8d, t = %8.3f"%(self.n,self.t), end="", flush=True)
+		print("\rn = %8d, t = %8.3f, T = (%6.2f, %6.2f, %6.2f)"%(self.n,self.t,self.gases[0].T(),self.gases[1].T(),self.gases[2].T()), end="", flush=True)
 		plt.pause(self.dt/rate)
 
 	def live(self,rate=100):

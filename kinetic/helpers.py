@@ -22,6 +22,6 @@ quivstyle = dict(color='0.5', pivot='tip', headlength=0, headwidth=0, headaxisle
 isnum = lambda x: type(x) in [float,int]
 
 
-
+alpha = lambda g,d=2: d/2.+1. if 1.*g>0. else d/2. 
 
 
