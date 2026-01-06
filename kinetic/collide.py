@@ -3,9 +3,11 @@ import numpy as np
 from numba import njit
 from kinetic.helpers import *
 
-def wc(b,w,z=1,pm=1):
+
+
+def wc(gas,w,z=1,pm=1):
 	##
-	y, vy, m, y0, wE0, mu = 1.*b.xy[z], 1.*b.vxy[z], 1.*b.m, 1.*w.z, 1.*w.E, 1.*w.mu
+	y, vy, m, y0, wE0, mu = 1.*gas.xy[z], 1.*gas.vxy[z], 1.*gas.m, 1.*w.z, 1.*w.E, 1.*w.mu
 	##
 	mask = (pm*(y-y0) <= 0)
 	##
@@ -21,10 +23,13 @@ def wc(b,w,z=1,pm=1):
 	else:
 		return 1.*vy, 1.*wE0
 
+
+
 def wc0(y,vy,y0,pm=1):
 	mask = (pm*(y-y0) <= 0) & (pm*vy < 0)
 	vy[mask] *= -1
 	return vy
+
 
 
 @njit
@@ -49,3 +54,7 @@ def COLLIDE(xy, vxy, r0):
 					## update
 					vxy[:,i] += 2. * (np.dot(dv,dz)/np.dot(dz,dz)) * dz
 					vxy[:,j] -= 2. * (np.dot(dv,dz)/np.dot(dz,dz)) * dz
+
+
+
+

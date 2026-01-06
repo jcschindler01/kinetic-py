@@ -9,6 +9,8 @@ Initialize.
 
 import numpy as np
 
+rng = np.random.default_rng(seed=None)
+
 zrand = lambda N: np.random.random((2,N))
 rms = lambda vxy: np.sqrt(np.sum(vxy**2))
 rmsnorm = lambda vxy: vxy/rms(vxy)
@@ -26,4 +28,19 @@ alpha = lambda g,d=2: d/2.+1. if 1.*g>0. else d/2.
 
 gms = lambda ax,r0: 2.*r0*(72./ax.figure.dpi)*ax.get_window_extent().width/(ax.get_xlim()[1]-ax.get_xlim()[0])
 
+def bounds(gas):
+	b = dict()
+	for key in gas.walls.keys():
+		if isnum(gas.walls[key]):
+			b[key] = 1.*gas.walls[key]
+		else:
+			b[key] = 1.*gas.walls[key].z
+	return b
+
+def extent(sys):
+	x0 = np.min([bounds(gas)['l'] for gas in sys.gases])
+	x1 = np.max([bounds(gas)['r'] for gas in sys.gases])
+	y0 = np.min([bounds(gas)['b'] for gas in sys.gases])
+	y1 = np.max([bounds(gas)['t'] for gas in sys.gases])
+	return dict(l=x0,r=x1,b=y0,t=y1)
 

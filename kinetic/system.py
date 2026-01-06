@@ -1,7 +1,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from matplotlib.patches import Rectangle
+from matplotlib.widgets import Button, Slider
 plt.style.use("classic")
 
 from kinetic.helpers import *
@@ -32,10 +33,6 @@ class species:
 		pot = np.sum(self.m*self.g*self.xy[1])
 		tot = pot + kin
 		return kin, pot, tot
-
-
-	def ic(self, IC, args):
-		self.xy, self.vxy = IC(self.N, **args)
 
 	def free(self,dt):
 		self.xy[0] += self.vxy[0]*dt
@@ -77,6 +74,9 @@ class species:
 		self.wall()
 		self.free(dt/2)
 
+	def set_g(self, val):
+		self.g = 1.*val
+
 	def E(self):
 		kin = np.sum(0.5*self.m*self.vxy**2)
 		pot = np.sum(self.m*self.g*self.xy[1])
@@ -89,55 +89,87 @@ class species:
 
 
 
+
 class system:
 
-	def __init__(self, dt=0.1):
+	def __init__(self, dt=0.1, rate=100, dh=5):
 		self.n = 0
 		self.t = 0.0
 		self.dt = 1.*dt
+		self.rate = 1.*rate
 		self.gases = []
 		self.walls = []
+		self.dh = 1.*dh
 		self.fig = None
 		self.ax = None
+		self.axes = dict()
+		self.slider = None
 		self.gdat = None
 
 	def evolve(self):
 		for gas in self.gases:
 			gas.evolve(self.dt)
-			self.t += self.dt
-			self.n += 1
+		self.t += self.dt
+		self.n += 1
 
 	def newfig(self):
+		## fig
 		plt.ion()
-		fig = plt.figure(figsize=(10,8))
-		ax = plt.axes([0,0,.6,1])
+		fig = plt.figure(figsize=(12,10))
+		## main axis
+		ax = plt.axes([.01,.01,.4,.98])
+		b0 = extent(self)
+		x0, x1, y0, y1 = b0['l'], b0['r'], b0['b'], b0['t']
+		epsx, epsy = .2, .1
 		plt.xticks([])
 		plt.yticks([])
-		plt.xlim(-1,2)
-		plt.ylim(-.1,2.9)
+		plt.xlim(x0-epsx, x1+epsx)
+		plt.ylim(y0-epsy, y0-epsy+self.dh)
+		plt.ylim(0-.1,5-.1)
 		ax.set_aspect(1)
 		gdat = []
-		plt.plot([0,0,1,1],[4,0,0,4], 'k-')
-		plt.plot([1,1,1.5,1.5,1.5],[1,0,0,1,4], 'k-')		
-		plt.plot([0,0,-.5,-.5,-.5],[1,0,0,1,4], 'k-')		
+		rsty0 = dict(ec='0.8', lw=1, fc='none')
+		rsty1 = dict(ec='k', lw=1, fc='none')
 		for gas in self.gases:
+			b = bounds(gas)
+			ax.add_patch(Rectangle((b['l'],b['b']),(b['r']-b['l']),(b['t']-b['b']),**rsty0))
+			ax.add_patch(Rectangle((b['l'],b0['b']),(b['r']-b['l']),(b0['t']-b0['b']),**rsty1))
 			gdat += list(ax.plot(gas.xy[0], gas.xy[1], ms=gms(ax,gas.r0), **gas.sty))
+		## controls
+		gax = plt.axes([.42,.53,.1,.4])
+		self.slider = Slider(
+			ax=gax, 
+			label=r"Gravity ($g$)", 
+			valmin=0, valmax=5, 
+			valinit=self.gases[0].g, 
+			orientation="vertical",
+			initcolor="g"
+			)
+		## go
+		fig.canvas.draw()
 		plt.show(block=False)
 		self.fig, self.ax, self.gdat = fig, ax, gdat
+		self.axes.update(dict(main=ax))
+		self.liveprint()
 
-	def update(self, rate=1):
+	def update(self):
+		self.gases[0].g = 1.*self.slider.val
 		self.evolve()
 		for i in range(len(self.gases)):
 			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
 			self.gdat[i].set_markersize(gms(self.ax,self.gases[i].r0))
-		print("\rn = %8d, t = %8.3f, T = (%6.2f, %6.2f, %6.2f)"%(self.n,self.t,self.gases[0].T(),self.gases[1].T(),self.gases[2].T()), end="", flush=True)
-		plt.pause(self.dt/rate)
+		self.liveprint()
+		plt.pause(self.dt/self.rate)
 
-	def live(self,rate=100):
+	def live(self):
 		self.newfig()
 		while plt.fignum_exists(self.fig.number):
-			self.update(rate)
+			self.update()
 		print(flush=True)
 
+	def liveprint(self):
+		print("\rn = %8d, t = %8.3f, "%(self.n,self.t), end="")
+		print("T = ("+", ".join(["%6.2f"%gas.T() for gas in self.gases])+")", end="", flush=True)
+		
 
 

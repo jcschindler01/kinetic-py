@@ -1,4 +1,4 @@
 
-from kinetic.system import system, species, wall
-from kinetic.constructor import hotcold
+from kinetic.system import *
+from kinetic.constructor import *
 from kinetic.ics import *

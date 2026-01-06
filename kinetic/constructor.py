@@ -3,26 +3,63 @@
 from kinetic.system import wall, species, system
 from kinetic import ics
 
-def hotcold(dt=0.01, mu=0.99, N=100, Nhc=50, r0=0.005, rhc=0.02, g=1, ghc=0, T0=(1,2,4)):
+from types import SimpleNamespace
 
-	sys = system(dt)
+def hotcold(params):
 
-	hotwall = wall(loc=1, mu=mu)
-	coldwall = wall(loc=0, mu=mu)
+	defaults = dict(
+		## live
+		dt=0.01,
+		rate=100,
+		## wall
+		mu=0.9,
+		## balls
+		N =500, m =1  , r =.01, g =1,
+		Nh=200, mh=100, rh=.02, gh=0,
+		Nc=200, mc=100, rc=.02, gc=0,
+		## bounds
+		b0=dict(b=0, t=100, l=0  , r=1  ),
+		bh=dict(b=0, t=1  , l=1  , r=1.5),
+		bc=dict(b=0, t=1  , l=-.5, r=0  ),
+		## sty
+		s0=dict(),
+		sh=dict(c='r'),
+		sc=dict(c='b'),
+		## ics
+		ic  = lambda gas:  ics.random(gas, xx=(0,.5) , yy=(1,2), v=2 ),
+		ich = lambda gas:  ics.random(gas, xx=(1,1.5), yy=(0,1), v=4 ),
+		icc = lambda gas:  ics.random(gas, xx=(-.5,0), yy=(0,1), v=.1),
+		)
 
-	main = species(N=N, m=1, r0=r0, g=g, walls=dict(b=0,t=100,l=coldwall,r=hotwall))
-	hot = species(N=Nhc, m=100, r0=rhc, g=ghc, walls=dict(b=0,t=1,l=hotwall, r=1.5), sty=dict(c='r'))
-	cold = species(N=Nhc, m=100, r0=rhc, g=ghc, walls=dict(b=0,t=1,l=-0.5, r=coldwall), sty=dict(c='b'))
+	defaults.update(params)
+	p = SimpleNamespace(**defaults)
 
-	main.ic(ics.random,args=dict(xx=(0,.5),yy=(1,2), v=2))
-	hot.ic(ics.random,args=dict(xx=(1,1.5),yy=(0,1),v=4))
-	cold.ic(ics.random,args=dict(xx=(-.5,0),yy=(0,1),v=.1))
+	sys = system(p.dt,p.rate)
 
-	sys.walls = [hotwall,coldwall]
-	sys.gases = [cold, main, hot]
+	main = species(N=p.N,  m=p.m,  r0=p.r,  g=p.g,  walls=dict(p.b0), sty=p.s0)
+	main.xy, main.vxy = p.ic(main)
+
+	sys.gases = [main]
+	sys.walls = []
+
+	if p.Nc>0:
+		coldwall = wall(loc=p.bc['r'], mu=p.mu)
+		cold = species(N=p.Nc, m=p.mc, r0=p.rc, g=p.gc, walls=dict(p.bc,r=coldwall), sty=p.sc)
+		cold.xy, cold.vxy = p.icc(cold)
+
+		sys.walls += [coldwall,]
+		sys.gases += [cold,]
+		main.walls.update(l=coldwall)
+
+	if p.Nh>0:
+		hotwall  = wall(loc=p.bh['l'], mu=p.mu)
+		hot  = species(N=p.Nh, m=p.mh, r0=p.rh, g=p.gh, walls=dict(p.bh,l=hotwall), sty=p.sh)
+		hot.xy,  hot.vxy  = p.ich(hot)
+
+		sys.walls += [hotwall,]
+		sys.gases += [hot,]
+		main.walls.update(r=hotwall)
+
 
 	return sys
-
-
-
 
