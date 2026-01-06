@@ -60,6 +60,8 @@ def hotcold(params):
 		sys.gases += [hot,]
 		main.walls.update(r=hotwall)
 
+	sys.constructor = hotcold
+	sys.constructor_params = params
 
 	return sys
 

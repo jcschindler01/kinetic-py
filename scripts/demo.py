@@ -9,8 +9,8 @@ params = dict(
 		mu=0.9,
 		## balls
 		N =500, m =1  , r =.01, g =1,
-		Nh=20, mh=100, rh=.02, gh=0,
-		Nc=100, mc=100, rc=.02, gc=0,
+		Nh=150, mh=100, rh=.02, gh=0,
+		Nc=0, mc=100, rc=.02, gc=0,
 		## bounds
 		b0=dict(t=99, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),

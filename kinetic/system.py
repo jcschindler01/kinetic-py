@@ -92,19 +92,27 @@ class species:
 
 class system:
 
-	def __init__(self, dt=0.1, rate=100, dh=5):
+	def __init__(self, dt=0.1, rate=100):
 		self.n = 0
 		self.t = 0.0
 		self.dt = 1.*dt
 		self.rate = 1.*rate
 		self.gases = []
 		self.walls = []
-		self.dh = 1.*dh
 		self.fig = None
 		self.ax = None
 		self.axes = dict()
-		self.slider = None
 		self.gdat = None
+		##
+		self.constructor = None
+		self.constructor_params = None
+		##
+		self.gslider = None
+		self.paused = False
+		self.pausebutton = None
+		self.resetbutton = None
+		self.dtslider = None
+		self.yzoom = 4.9
 
 	def evolve(self):
 		for gas in self.gases:
@@ -115,17 +123,16 @@ class system:
 	def newfig(self):
 		## fig
 		plt.ion()
-		fig = plt.figure(figsize=(12,10))
+		fig = plt.figure(num="Thermodynamics", figsize=(12,10))
 		## main axis
-		ax = plt.axes([.01,.01,.4,.98])
+		ax = axlbrt(0.01, 0.01, 0.39, 0.99)
 		b0 = extent(self)
 		x0, x1, y0, y1 = b0['l'], b0['r'], b0['b'], b0['t']
 		epsx, epsy = .2, .1
 		plt.xticks([])
 		plt.yticks([])
 		plt.xlim(x0-epsx, x1+epsx)
-		plt.ylim(y0-epsy, y0-epsy+self.dh)
-		plt.ylim(0-.1,5-.1)
+		plt.ylim(y0-epsy, self.yzoom)
 		ax.set_aspect(1)
 		gdat = []
 		rsty0 = dict(ec='0.8', lw=1, fc='none')
@@ -136,14 +143,56 @@ class system:
 			ax.add_patch(Rectangle((b['l'],b0['b']),(b['r']-b['l']),(b0['t']-b0['b']),**rsty1))
 			gdat += list(ax.plot(gas.xy[0], gas.xy[1], ms=gms(ax,gas.r0), **gas.sty))
 		## controls
-		gax = plt.axes([.42,.53,.1,.4])
-		self.slider = Slider(
+		controls = axlbrt(.41, .61, .75, .97)
+		plt.xticks([])
+		plt.yticks([])
+		gax = axlbrt(.415, .64, .485, .93)
+		self.gslider = Slider(
 			ax=gax, 
 			label=r"Gravity ($g$)", 
 			valmin=0, valmax=5, 
 			valinit=self.gases[0].g, 
 			orientation="vertical",
 			initcolor="g"
+			)
+		pbax = axlbrt(.5,.8,.59,.85)
+		self.pausebutton = Button(
+			ax=pbax,
+			label="\u25B6 / ||"
+			)
+		self.pausebutton.on_clicked(self.toggle_paused)
+		rbax = axlbrt(.61,.8,.69,.85)
+		self.resetbutton = Button(
+			ax=rbax,
+			label="Reset"
+			)
+		self.resetbutton.on_clicked(self.reset)
+		rateax = axlbrt(.55,.7,.7,.71)
+		self.rateslider = Slider(
+			ax=rateax, 
+			label=r"Rate", 
+			valmin=-2, valmax=2, 
+			valinit=np.log10(self.rate),
+			orientation="horizontal",
+			initcolor="g",
+			)
+		dtax = axlbrt(.55,.68,.7,.69)
+		self.dtslider = Slider(
+			ax=dtax, 
+			label=r"dt", 
+			valmin=0.001, valmax=0.01, 
+			valinit=self.dt,
+			orientation="horizontal",
+			initcolor="g",
+			)
+		yzax = axlbrt(.55,.66,.7,.67)
+		self.yzslider = Slider(
+			ax=yzax, 
+			label=r"yzoom", 
+			valmin=.1, valmax=10, 
+			valinit=self.yzoom,
+			orientation="horizontal",
+			initcolor="g",
 			)
 		## go
 		fig.canvas.draw()
@@ -152,8 +201,24 @@ class system:
 		self.axes.update(dict(main=ax))
 		self.liveprint()
 
+	def toggle_paused(self,event):
+		self.paused = not self.paused
+
+	def reset(self,event):
+		fresh = self.constructor(self.constructor_params)
+		self.gases = fresh.gases
+		self.walls = fresh.walls
+		for i in range(len(self.gases)):
+			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
+			self.gdat[i].set_markersize(gms(self.ax,self.gases[i].r0))
+		self.liveprint()
+
 	def update(self):
-		self.gases[0].g = 1.*self.slider.val
+		self.gases[0].g = 1.*self.gslider.val
+		self.rate = 10.**self.rateslider.val
+		self.dt = self.dtslider.val
+		self.yzoom = self.yzslider.val
+		self.ax.set_ylim(top=self.yzoom)
 		self.evolve()
 		for i in range(len(self.gases)):
 			self.gdat[i].set_data(self.gases[i].xy[0], self.gases[i].xy[1])
@@ -164,7 +229,10 @@ class system:
 	def live(self):
 		self.newfig()
 		while plt.fignum_exists(self.fig.number):
-			self.update()
+			if not self.paused:
+				self.update()
+			if self.paused:
+				plt.pause(self.dt/self.rate)
 		print(flush=True)
 
 	def liveprint(self):

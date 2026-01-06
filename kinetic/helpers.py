@@ -8,6 +8,7 @@ Initialize.
 """
 
 import numpy as np
+from matplotlib.pyplot import axes
 
 rng = np.random.default_rng(seed=None)
 
@@ -44,3 +45,4 @@ def extent(sys):
 	y1 = np.max([bounds(gas)['t'] for gas in sys.gases])
 	return dict(l=x0,r=x1,b=y0,t=y1)
 
+axlbrt = lambda l,b,r,t: axes([l,b,r-l,t-b])
