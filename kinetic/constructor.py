@@ -63,8 +63,8 @@ def hotcold(params):
 
 	sys.constructor = hotcold
 	sys.constructor_params = params
-	sys.init_gases = copy.deepcopy(sys.gases)
-	sys.init_walls = copy.deepcopy(sys.walls)
+	sys.init_xy  = [1.*gas.xy  for gas in sys.gases]
+	sys.init_vxy = [1.*gas.vxy for gas in sys.gases]
 
 	return sys
 

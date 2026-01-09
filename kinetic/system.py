@@ -107,6 +107,9 @@ class system:
 		fresh = self.constructor(self.constructor_params)
 		self.gases = fresh.gases
 		self.walls = fresh.walls
+		for i in range(len(self.gases)):
+			self.gases[i].xy  = 1.*self.init_xy[i]
+			self.gases[i].vxy = 1.*self.init_vxy[i]
 
 	def set_rate(self, rate):
 		self.rate = 1.*rate
