@@ -10,9 +10,9 @@ Initialize.
 import numpy as np
 from matplotlib.pyplot import axes
 
-rng = np.random.default_rng(seed=None)
+rng = np.random.default_rng(seed=150)
 
-zrand = lambda N: np.random.random((2,N))
+zrand = lambda N: rng.random((2,N))
 rms = lambda vxy: np.sqrt(np.sum(vxy**2))
 rmsnorm = lambda vxy: vxy/rms(vxy)
 vrand = lambda N: rmsnorm(zrand(N) - 0.5)

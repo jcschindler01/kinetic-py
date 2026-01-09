@@ -4,6 +4,7 @@ from kinetic.system import wall, species, system
 from kinetic import ics
 
 from types import SimpleNamespace
+import copy
 
 def hotcold(params):
 
@@ -21,14 +22,14 @@ def hotcold(params):
 		b0=dict(b=0, t=100, l=0  , r=1  ),
 		bh=dict(b=0, t=1  , l=1  , r=1.5),
 		bc=dict(b=0, t=1  , l=-.5, r=0  ),
-		## sty
-		s0=dict(),
-		sh=dict(c='r'),
-		sc=dict(c='b'),
 		## ics
 		ic  = lambda gas:  ics.random(gas, xx=(0,.5) , yy=(1,2), v=2 ),
 		ich = lambda gas:  ics.random(gas, xx=(1,1.5), yy=(0,1), v=4 ),
 		icc = lambda gas:  ics.random(gas, xx=(-.5,0), yy=(0,1), v=.1),
+		## sty
+		s0=dict(color="black"),
+		sh=dict(color="red"),
+		sc=dict(color="blue"),
 		)
 
 	defaults.update(params)
@@ -62,6 +63,8 @@ def hotcold(params):
 
 	sys.constructor = hotcold
 	sys.constructor_params = params
+	sys.init_gases = copy.deepcopy(sys.gases)
+	sys.init_walls = copy.deepcopy(sys.walls)
 
 	return sys
 
