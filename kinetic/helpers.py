@@ -8,7 +8,8 @@ Initialize.
 """
 
 import numpy as np
-from matplotlib.pyplot import axes
+import inspect
+
 
 rng = np.random.default_rng(seed=150)
 
@@ -19,15 +20,9 @@ vrand = lambda N: rmsnorm(zrand(N) - 0.5)
 
 vsq = lambda v: np.sum(v**2)
 
-quivstyle = dict(color='0.5', pivot='tip', headlength=0, headwidth=0, headaxislength=0)
-
-
 isnum = lambda x: type(x) in [float,int]
 
-
 alpha = lambda g,d=2: d/2.+1. if 1.*g>0. else d/2. 
-
-gms = lambda ax,r0: 2.*r0*(72./ax.figure.dpi)*ax.get_window_extent().width/(ax.get_xlim()[1]-ax.get_xlim()[0])
 
 def bounds(gas):
 	b = dict()
@@ -45,4 +40,34 @@ def extent(sys):
 	y1 = np.max([bounds(gas)['t'] for gas in sys.gases])
 	return dict(l=x0,r=x1,b=y0,t=y1)
 
-axlbrt = lambda l,b,r,t: axes([l,b,r-l,t-b])
+
+def param_inputs(params):
+	keys = ["N","m","r","g"]
+	gases = ["", "c", "h"]
+	s = ""
+	for key in keys:
+		for gas in gases:
+			s0 = "%s%s"%(key,gas)
+			s1 = "%s, "%(params[s0])
+			s += s0.ljust(2) + " = " + s1.ljust(8)
+		s+="\n"
+	for key in ["mu"]:
+		s0 = "mu"
+		s1 = "%s, "%(params["mu"])
+		s += s0.ljust(2) + " = " + s1.ljust(8)
+	return s
+
+
+def get_kwargs(f):
+    sig = inspect.signature(f)
+    parts = [
+        f"{k}={repr(v.default)}" 
+        for k, v in sig.parameters.items() 
+        if v.default is not inspect.Parameter.empty
+    ]
+    return ", ".join(parts)
+
+
+def dicts(s):
+	return eval("dict("+s+")")
+

@@ -42,5 +42,29 @@ def constE(gas, E=1):
 	vy = np.sin(2.*np.pi*theta)*v
 	return np.stack([x,y]), np.stack([vx,vy])
 
-	
 
+ICX = dict(Thermal=thermal, Random=random, ConstE=constE)
+
+def IC_kwargs(ic):
+	if isinstance(ic,str):
+		ic = ICX[ic]
+	s = "\n".join([label + get_kwargs(ic) for label in ["0: ", "c: ", "h: "]])
+	return s
+
+def IC_get(ic, s):
+	##
+	s = [ss[2:].strip() for ss in s.split("\n")]
+	args = [dicts(ss) for ss in s]
+	if isinstance(ic,str):
+		ic = ICX[ic]
+	##
+	IC = dict(
+		ic   = lambda gas:  ic(gas, **args[0]),
+		icc  = lambda gas:  ic(gas, **args[1]),
+		ich  = lambda gas:  ic(gas, **args[2]),
+		)
+	return IC
+
+
+if __name__=="__main__":
+	IC_get("Thermal", "")

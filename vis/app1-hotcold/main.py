@@ -125,7 +125,10 @@ for i in range(len(sys.gases)):
 
 ## controls
 pause = mod.Button(label="Play/Pause")
-pause.on_click(sys.pause)
+def pausehandler():
+	global sys
+	sys.pause()
+pause.on_click(pausehandler)
 
 reset = mod.Button(label="Reset")
 def resethandler():
@@ -177,10 +180,38 @@ def yzoomhandler(attr, old, new):
 		lock_aspect()
 yzoom.on_change("value", yzoomhandler)
 
+regentext = CC(mod.Spacer(height=5), mod.Div(text="<b>Regenerate:</b>", height=10))
 
+regen = mod.Button(label="Regenerate")
+def regenhandler():
+	global params
+	global sys
+	params.update(dicts(paraminputs.value))
+	IC = ICbuttons.labels[ICbuttons.active]
+	params.update(ics.IC_get(IC, s=ICparams.value))
+	sys = hotcold(params)
+	refresh()
+regen.on_click(regenhandler)
+
+
+paramstyle = mod.InlineStyleSheet(css="""
+.bk-input {
+    font-family: "Courier New", monospace !important;
+    padding: 2px 2px;
+}
+""")
+paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), rows=6, cols=35, stylesheets=[paramstyle])
+
+ICbuttons = mod.RadioGroup(labels=["Random", "Thermal", "ConstE"], active=0)
+ICtext0 = ics.IC_kwargs(ICbuttons.labels[ICbuttons.active])
+ICparams  = mod.TextAreaInput(value=ICtext0, rows=3, cols=25, stylesheets=[paramstyle])
+ICoptions = RR(ICbuttons, ICparams)
+def ICbuttonhandler(attr, old, new):
+	ICparams.value = ics.IC_kwargs(ICbuttons.labels[new])
+ICbuttons.on_change("active", ICbuttonhandler)
 
 ## layouts
-controls = RR(gval, CC(RR(pause,reset,checkboxes), rateval, dtval, yzoom))
+controls = RR(gval, CC(RR(pause,reset,checkboxes), rateval, dtval, yzoom, regentext, regen, paraminputs, ICoptions))
 
 ## add roots
 doc.add_root(RR(main,controls))
