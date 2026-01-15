@@ -119,8 +119,7 @@ xperim = np.array([0,0,1,1,0])
 yperim = np.array([1,0,0,1,1])*edges['t']
 main.line(xperim, yperim, color="black")
 
-for i in range(len(sys.gases)):
-	main.circle(source=gasdata[i], radius=sys.gases[i].r0, **sys.gases[i].sty)
+dots = [main.circle(source=gasdata[i], radius=sys.gases[i].r0, **sys.gases[i].sty) for i in range(len(sys.gases))]
 
 ## controls
 pause = mod.Button(label="Play/Pause")
@@ -193,6 +192,8 @@ def regenhandler():
 		buff_x = [gas.xy[0] for gas in sys.gases]
 		buff_y = [gas.xy[1] for gas in sys.gases]
 	if ispaused: sys.pause()
+	for i in range(len(sys.gases)):
+		dots[i].glyph.radius = sys.gases[i].r0
 	refresh()
 regen.on_click(regenhandler)
 
@@ -233,7 +234,7 @@ def update():
 
 ## refresh
 def refresh():
-	global sys
+	global sys, dots
 	with lock:
 		for i in range(len(sys.gases)):
 			np.copyto(buff_x[i], sys.gases[i].xy[0])
@@ -242,6 +243,7 @@ def refresh():
 	rateval.value = np.log10(sys.rate)
 	dtval.value = np.log10(sys.dt)
 	gval.value = gsliderval(sys.gases[0].g)
+
 
 ## schedule callback
 fps = 60
