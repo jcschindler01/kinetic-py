@@ -219,7 +219,7 @@ ICparams.on_change("value", ICtexthandler)
 ICbuttons.on_change("active", ICbuttonhandler)
 
 ## layouts
-controls = RR(gval, CC(RR(pause,reset,checkboxes), rateval, dtval, yzoom, regentext, regen, paraminputs, ICoptions))
+controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))
 
 ## add roots
 doc.add_root(RR(main,controls))
