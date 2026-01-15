@@ -32,10 +32,9 @@ params = dict(
 		bh=dict(t=1 , r=1.5, b=0, l=1),
 		bc=dict(t=1 , l=-.5, b=0, r=0),
 		## ics
-		# ic  = lambda gas:  kin.thermal(gas, T=1 ),
-		ic  = lambda gas:  ics.random(gas, xx=(0,.5) , yy=(1,2), v=2 ),
-		ich = lambda gas:  ics.random(gas, v=4 ),
-		icc = lambda gas:  ics.random(gas, v=1 ),
+		ic  = lambda gas:  ics.random(gas, v=2, lr=(0,.5) , bt=(1,2)),
+		ich = lambda gas:  ics.random(gas,  v=4 ),
+		icc = lambda gas:  ics.random(gas,  v=1 ),
 		## sty
 		s0=dict(color="black"),
 		sh=dict(color="red"),
@@ -184,12 +183,16 @@ regentext = CC(mod.Spacer(height=5), mod.Div(text="<b>Regenerate:</b>", height=1
 
 regen = mod.Button(label="Regenerate")
 def regenhandler():
-	global params
-	global sys
+	global params, sys, buff_x, buff_y
+	ispaused = sys.paused
 	params.update(dicts(paraminputs.value))
 	IC = ICbuttons.labels[ICbuttons.active]
 	params.update(ics.IC_get(IC, s=ICparams.value))
 	sys = hotcold(params)
+	with lock:
+		buff_x = [gas.xy[0] for gas in sys.gases]
+		buff_y = [gas.xy[1] for gas in sys.gases]
+	if ispaused: sys.pause()
 	refresh()
 regen.on_click(regenhandler)
 
@@ -198,16 +201,20 @@ paramstyle = mod.InlineStyleSheet(css="""
 .bk-input {
     font-family: "Courier New", monospace !important;
     padding: 2px 2px;
+    white-space: nowrap;
 }
 """)
-paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), rows=6, cols=35, stylesheets=[paramstyle])
+paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), rows=6, cols=44, stylesheets=[paramstyle])
 
 ICbuttons = mod.RadioGroup(labels=["Random", "Thermal", "ConstE"], active=0)
-ICtext0 = ics.IC_kwargs(ICbuttons.labels[ICbuttons.active])
-ICparams  = mod.TextAreaInput(value=ICtext0, rows=3, cols=25, stylesheets=[paramstyle])
+currentICtext = [ics.IC_kwargs(label) for label in ICbuttons.labels]
+ICparams  = mod.TextAreaInput(value=currentICtext[ICbuttons.active], rows=4, cols=35, stylesheets=[paramstyle])
 ICoptions = RR(ICbuttons, ICparams)
+def ICtexthandler(attr, old, new):
+	currentICtext[ICbuttons.active] = new
 def ICbuttonhandler(attr, old, new):
-	ICparams.value = ics.IC_kwargs(ICbuttons.labels[new])
+	ICparams.value = currentICtext[ICbuttons.active]
+ICparams.on_change("value", ICtexthandler)
 ICbuttons.on_change("active", ICbuttonhandler)
 
 ## layouts
@@ -232,6 +239,8 @@ def refresh():
 			np.copyto(buff_x[i], sys.gases[i].xy[0])
 			np.copyto(buff_y[i], sys.gases[i].xy[1])
 			gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
+	rateval.value = np.log10(sys.rate)
+	dtval.value = np.log10(sys.dt)
 	gval.value = gsliderval(sys.gases[0].g)
 
 ## schedule callback

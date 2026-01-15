@@ -43,23 +43,21 @@ def hotcold(params):
 	sys.gases = [main]
 	sys.walls = []
 
-	if p.Nc>0:
-		coldwall = wall(loc=p.bc['r'], mu=p.mu)
-		cold = species(N=p.Nc, m=p.mc, r0=p.rc, g=p.gc, walls=dict(p.bc,r=coldwall), sty=p.sc)
-		cold.xy, cold.vxy = p.icc(cold)
+	coldwall = wall(loc=p.bc['r'], mu=p.mu)
+	cold = species(N=p.Nc, m=p.mc, r0=p.rc, g=p.gc, walls=dict(p.bc,r=coldwall), sty=p.sc)
+	cold.xy, cold.vxy = p.icc(cold)
 
-		sys.walls += [coldwall,]
-		sys.gases += [cold,]
-		main.walls.update(l=coldwall)
+	sys.walls += [coldwall,]
+	sys.gases += [cold,]
+	main.walls.update(l=coldwall)
 
-	if p.Nh>0:
-		hotwall  = wall(loc=p.bh['l'], mu=p.mu)
-		hot  = species(N=p.Nh, m=p.mh, r0=p.rh, g=p.gh, walls=dict(p.bh,l=hotwall), sty=p.sh)
-		hot.xy,  hot.vxy  = p.ich(hot)
+	hotwall  = wall(loc=p.bh['l'], mu=p.mu)
+	hot  = species(N=p.Nh, m=p.mh, r0=p.rh, g=p.gh, walls=dict(p.bh,l=hotwall), sty=p.sh)
+	hot.xy,  hot.vxy  = p.ich(hot)
 
-		sys.walls += [hotwall,]
-		sys.gases += [hot,]
-		main.walls.update(r=hotwall)
+	sys.walls += [hotwall,]
+	sys.gases += [hot,]
+	main.walls.update(r=hotwall)
 
 	sys.constructor = hotcold
 	sys.constructor_params = params

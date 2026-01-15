@@ -3,13 +3,17 @@ import numpy as np
 
 from kinetic.helpers import *
 
-def random(gas, xx=None, yy=None, v=1):
-	if xx==None:
-		xx = (bounds(gas)['l'], bounds(gas)['r'])
-	if yy==None:
-		yy = (bounds(gas)['b'], bounds(gas)['t'])
-	x = xx[0] + (xx[1]-xx[0])*np.random.random(gas.N)
-	y = yy[0] + (yy[1]-yy[0])*np.random.random(gas.N)
+def random(gas, lr=[], bt=[], v=1):
+	gb = bounds(gas).copy()
+	if len(lr) !=2: lr = [np.nan, np.nan]
+	if len(bt) !=2: bt = [np.nan, np.nan]
+	lr, bt = 1.*np.array(lr), 1.*np.array(bt)
+	lr[0] = np.nanmax([gb['l'], lr[0]])
+	lr[1] = np.nanmin([gb['r'], lr[1]])
+	bt[0] = np.nanmax([gb['b'], bt[0]])
+	bt[1] = np.nanmin([gb['t'], bt[1], 2])
+	x = lr[0] + (lr[1]-lr[0])*np.random.random(gas.N)
+	y = bt[0] + (bt[1]-bt[0])*np.random.random(gas.N)
 	return np.stack([x,y]), v*vrand(gas.N)
 
 def thermal(gas, T=1):
