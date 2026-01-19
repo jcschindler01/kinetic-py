@@ -25,8 +25,8 @@ params = dict(
 		mu=0.9,
 		## balls
 		N =500, m =1  , r =.01, g =1,
-		Nh=100, mh=100, rh=.02, gh=0,
-		Nc=100, mc=100, rc=.02, gc=0,
+		Nh=0, mh=100, rh=.02, gh=0,
+		Nc=0, mc=100, rc=.02, gc=0,
 		## bounds
 		b0=dict(t=99, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),
@@ -46,22 +46,34 @@ sys = hotcold(params)
 
 ## buffer variables
 lock = threading.Lock()
-buff_x = [gas.xy[0] for gas in sys.gases]
-buff_y = [gas.xy[1] for gas in sys.gases]
-
+buff_t = 1.*sys.t
+buff_x = [np.array(gas.xy[0], dtype='float64', order='C') for gas in sys.gases]
+buff_y = [np.array(gas.xy[1], dtype='float64', order='C') for gas in sys.gases]
+buff_E = [gas.E() for gas in sys.gases]
+buff_T = [gas.T() for gas in sys.gases]
+buff_S = [gas.dS() for gas in sys.gases]
 
 ## physics loop
-def sys_live(tmax=100):
-	global sys
+def sys_live(tmax=1000):
+	global sys, buff_t, buff_E
 	while sys.t < tmax:
 		time.sleep(sys.dt/sys.rate)
 		if not sys.paused:
 			# sys.liveprint()
 			sys.evolve()
+			t  = 1.*sys.t
+			E = [gas.E() for gas in sys.gases]
+			T = [gas.T() for gas in sys.gases]
+			S = [gas.dS() for gas in sys.gases]
 			with lock:
+				buff_t = 1.*sys.t
 				for i in range(len(sys.gases)):
 					np.copyto(buff_x[i], sys.gases[i].xy[0])
 					np.copyto(buff_y[i], sys.gases[i].xy[1])
+					buff_t = 1.*t
+					buff_E[i] = 1.*E[i]
+					buff_T[i] = 1.*T[i]
+					buff_S[i] = 1.*S[i]
 	print(flush=True)
 
 ## start thread
@@ -86,6 +98,18 @@ doc = curdoc()
 
 ## data sources
 gasdata = [ColumnDataSource(dict(x=buff_x[i],y=buff_y[i])) for i in range(len(sys.gases))]
+streamdata = ColumnDataSource(dict(
+	t  = [buff_t],
+	E  = [buff_E[0]], 
+	Ec = [buff_E[1]], 
+	Eh = [buff_E[2]],
+	T  = [buff_T[0]], 
+	Tc = [buff_T[1]], 
+	Th = [buff_T[2]],
+	S  = [buff_S[0]], 
+	Sc = [buff_S[1]], 
+	Sh = [buff_S[2]],
+	))
 
 ## main plot
 main = figure(
@@ -120,6 +144,51 @@ yperim = np.array([1,0,0,1,1])*edges['t']
 main.line(xperim, yperim, color="black")
 
 dots = [main.circle(source=gasdata[i], radius=sys.gases[i].r0, **sys.gases[i].sty) for i in range(len(sys.gases))]
+
+## plots
+maxent = figure(
+	title = "MaxEnt",
+	frame_width = 200,
+	frame_height = 100,
+	output_backend = "canvas",
+	toolbar_location = None,
+	)
+maxent.xaxis.visible = False
+maxent.line(x="t", y="S" , source=streamdata, color="green")
+maxent.line(x="t", y="Sc", source=streamdata, color="blue")
+maxent.line(x="t", y="Sh", source=streamdata, color="red")
+maxent.y_range.min_interval = 1
+
+temperature = figure(
+	title = "Temperature",
+	frame_width = 200,
+	frame_height = 100,
+	output_backend = "canvas",
+	toolbar_location = None,
+	)
+temperature.xaxis.visible = False
+temperature.line(x="t", y="T" , source=streamdata, color="green")
+temperature.line(x="t", y="Tc", source=streamdata, color="blue")
+temperature.line(x="t", y="Th", source=streamdata, color="red")
+temperature.y_range.min_interval = 1
+
+energy = figure(
+	title = "Total Energy",
+	frame_width = 200,
+	frame_height = 100,
+	output_backend = "canvas",
+	toolbar_location = None,
+	)
+energy.xaxis.visible = False
+energy.line(x="t", y="E" , source=streamdata, color="green")
+energy.line(x="t", y="Ec", source=streamdata, color="blue")
+energy.line(x="t", y="Eh", source=streamdata, color="red")
+energy.y_range.min_interval = 5
+
+for p in [maxent, temperature, energy]:
+    p.min_border_left = 60
+    p.min_border_right = 20
+    p.lod_threshold = 1000
 
 ## controls
 pause = mod.Button(label="Play/Pause")
@@ -191,6 +260,8 @@ def regenhandler():
 	with lock:
 		buff_x = [gas.xy[0] for gas in sys.gases]
 		buff_y = [gas.xy[1] for gas in sys.gases]
+		buff_E = [gas.E() for gas in sys.gases]
+		buff_T = [gas.T() for gas in sys.gases]
 	if ispaused: sys.pause()
 	for i in range(len(sys.gases)):
 		dots[i].glyph.radius = sys.gases[i].r0
@@ -218,19 +289,25 @@ def ICbuttonhandler(attr, old, new):
 ICparams.on_change("value", ICtexthandler)
 ICbuttons.on_change("active", ICbuttonhandler)
 
-## layouts
-controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))
-
-## add roots
-doc.add_root(RR(main,controls))
-
 ## update loop
+frame = 0
+skip = 6
 def update():
-	global sys
+	global sys, frame
 	if not sys.paused:
 		with lock:
 			for i in range(len(sys.gases)):
 				gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
+			if frame%skip==0:
+				streamdata.stream(
+					dict(
+						t = [buff_t], 
+						E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
+						T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
+						S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
+					),
+				rollover=500)
+	frame += 1	
 
 ## refresh
 def refresh():
@@ -243,7 +320,16 @@ def refresh():
 	rateval.value = np.log10(sys.rate)
 	dtval.value = np.log10(sys.dt)
 	gval.value = gsliderval(sys.gases[0].g)
+	streamdata.data = {k: [] for k in streamdata.data.keys()}
 
+
+## layouts
+controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))
+plots = CC(maxent,temperature,energy)
+# plots = CC()
+
+## add roots
+doc.add_root(RR(main,plots,controls))
 
 ## schedule callback
 fps = 60

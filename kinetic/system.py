@@ -81,7 +81,17 @@ class species:
 		return tot
 
 	def T(self):
-		return self.E()/(self.N*alpha(self.g))
+		if self.g>0:
+			return self.E()/(self.N*alpha(self.g))
+		else:
+			return np.nan
+
+	def dS(self, d=2):
+		if self.g>0:
+			return (d/2.+1.)*np.log2(self.T())-np.log2(self.g)
+		else:
+			return np.nan
+
 
 
 
