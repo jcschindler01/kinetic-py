@@ -25,8 +25,8 @@ params = dict(
 		mu=0.9,
 		## balls
 		N =500, m =1  , r =.01, g =1,
-		Nh=0, mh=100, rh=.02, gh=0,
-		Nc=0, mc=100, rc=.02, gc=0,
+		Nh=50, mh=100, rh=.02, gh=0,
+		Nc=50, mc=100, rc=.02, gc=0,
 		## bounds
 		b0=dict(t=99, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),
@@ -109,6 +109,7 @@ streamdata = ColumnDataSource(dict(
 	S  = [buff_S[0]], 
 	Sc = [buff_S[1]], 
 	Sh = [buff_S[2]],
+	St = [np.nansum([buff_S])],
 	))
 
 ## main plot
@@ -157,7 +158,8 @@ maxent.xaxis.visible = False
 maxent.line(x="t", y="S" , source=streamdata, color="green")
 maxent.line(x="t", y="Sc", source=streamdata, color="blue")
 maxent.line(x="t", y="Sh", source=streamdata, color="red")
-maxent.y_range.min_interval = 1
+maxent.line(x="t", y="St", source=streamdata, color="black")
+maxent.y_range.min_interval = 100
 
 temperature = figure(
 	title = "Temperature",
@@ -262,6 +264,7 @@ def regenhandler():
 		buff_y = [gas.xy[1] for gas in sys.gases]
 		buff_E = [gas.E() for gas in sys.gases]
 		buff_T = [gas.T() for gas in sys.gases]
+		buff_S = [gas.S() for gas in sys.gases]
 	if ispaused: sys.pause()
 	for i in range(len(sys.gases)):
 		dots[i].glyph.radius = sys.gases[i].r0
@@ -305,6 +308,7 @@ def update():
 						E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
 						T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
 						S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
+						St = [np.nansum([buff_S])],
 					),
 				rollover=500)
 	frame += 1	

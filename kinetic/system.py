@@ -84,14 +84,13 @@ class species:
 		if self.g>0:
 			return self.E()/(self.N*alpha(self.g))
 		else:
-			return np.nan
+			return self.E()/(self.N*alpha(self.g))
 
 	def dS(self, d=2):
 		if self.g>0:
-			return (d/2.+1.)*np.log2(self.T())-np.log2(self.g)
+			return self.N*((d/2.+1.)*np.log2(self.T())-np.log2(self.g))
 		else:
-			return np.nan
-
+			return self.N*(d/2.)*np.log2(self.T())
 
 
 
