@@ -109,7 +109,7 @@ streamdata = ColumnDataSource(dict(
 	S  = [buff_S[0]], 
 	Sc = [buff_S[1]], 
 	Sh = [buff_S[2]],
-	St = [np.nansum([buff_S])],
+	St = [np.nansum(buff_S)],
 	))
 
 ## main plot
@@ -253,7 +253,7 @@ regentext = CC(mod.Spacer(height=5), mod.Div(text="<b>Regenerate:</b>", height=1
 
 regen = mod.Button(label="Regenerate")
 def regenhandler():
-	global params, sys, buff_x, buff_y
+	global frame, params, sys, buff_x, buff_y, buff_E, buff_T, buff_S
 	ispaused = sys.paused
 	params.update(dicts(paraminputs.value))
 	IC = ICbuttons.labels[ICbuttons.active]
@@ -265,10 +265,13 @@ def regenhandler():
 		buff_E = [gas.E() for gas in sys.gases]
 		buff_T = [gas.T() for gas in sys.gases]
 		buff_S = [gas.S() for gas in sys.gases]
-	if ispaused: sys.pause()
+	if ispaused: 
+		sys.pause()
 	for i in range(len(sys.gases)):
 		dots[i].glyph.radius = sys.gases[i].r0
-	refresh()
+	streamdata.data = {k: [] for k in streamdata.data.keys()}
+	resethandler()
+	frame = 0
 regen.on_click(regenhandler)
 
 
@@ -308,14 +311,14 @@ def update():
 						E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
 						T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
 						S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
-						St = [np.nansum([buff_S])],
+						St = [np.nansum(buff_S)],
 					),
 				rollover=500)
 	frame += 1	
 
 ## refresh
 def refresh():
-	global sys, dots
+	global sys, dots, streamdata
 	with lock:
 		for i in range(len(sys.gases)):
 			np.copyto(buff_x[i], sys.gases[i].xy[0])
