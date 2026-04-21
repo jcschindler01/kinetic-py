@@ -54,6 +54,7 @@ buff_y = [np.array(gas.xy[1], dtype='float64', order='C') for gas in sys.gases]
 buff_E = [gas.E() for gas in sys.gases]
 buff_T = [gas.T() for gas in sys.gases]
 buff_S = [gas.dS() for gas in sys.gases]
+buff_go = 1
 
 ## physics loop
 def sys_live(tmax=1000):
@@ -68,14 +69,15 @@ def sys_live(tmax=1000):
 			T = [gas.T() for gas in sys.gases]
 			S = [gas.dS() for gas in sys.gases]
 			with lock:
-				buff_t = 1.*sys.t
-				for i in range(len(sys.gases)):
-					np.copyto(buff_x[i], sys.gases[i].xy[0])
-					np.copyto(buff_y[i], sys.gases[i].xy[1])
-					buff_t = 1.*t
-					buff_E[i] = 1.*E[i]
-					buff_T[i] = 1.*T[i]
-					buff_S[i] = 1.*S[i]
+				if buff_go==1:
+					buff_t = 1.*sys.t
+					for i in range(len(sys.gases)):
+						np.copyto(buff_x[i], sys.gases[i].xy[0])
+						np.copyto(buff_y[i], sys.gases[i].xy[1])
+						buff_t = 1.*t
+						buff_E[i] = 1.*E[i]
+						buff_T[i] = 1.*T[i]
+						buff_S[i] = 1.*S[i]
 	print(flush=True)
 
 ## start thread
@@ -203,23 +205,16 @@ pause.on_click(pausehandler)
 
 reset = mod.Button(label="Reset")
 def resethandler():
+	with lock:
+		buff_go = 0
 	global ispaused
 	ispaused = sys.paused
 	sys.paused = True
 	clearstream()
 	doc.add_next_tick_callback(clearstream)
-	doc.add_next_tick_callback(resetchain)
-reset.on_click(resethandler)
-
-def resetchain():
-	""" Waits until next tick to add next tick callback. """
-	doc.add_next_tick_callback(resetter)
-
-def resetter():
 	sys.reset()
-	sys.paused = ispaused
-	doc.add_next_tick_callback(refresh)
-	doc.add_next_tick_callback(endclear)
+	doc.add_next_tick_callback(refresher)
+reset.on_click(resethandler)
 
 checkboxes = mod.CheckboxGroup(labels=["Lock Aspect"], active=[0], align="end")
 def checkhandler(attr, old, new): 
@@ -278,17 +273,15 @@ paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), r
 regen = mod.Button(label="Regenerate")
 
 def regenhandler():
-	global ispaused 
+	with lock:
+		buff_go = 0
+	global ispaused
 	ispaused = sys.paused
 	sys.paused = True
 	clearstream()
 	doc.add_next_tick_callback(clearstream)
-	doc.add_next_tick_callback(regenchain)
-regen.on_click(regenhandler)
-
-def regenchain():
-	""" Waits until next tick to add next tick callback. """
 	doc.add_next_tick_callback(regenerate)
+regen.on_click(regenhandler)
 
 def regenerate():
 	global sys
@@ -296,9 +289,8 @@ def regenerate():
 	params.update(dicts(paraminputs.value))
 	params.update(ics.IC_get(IC, s=ICparams.value))
 	sys = hotcold(params)
-	sys.paused = ispaused
-	doc.add_next_tick_callback(refresh)
-	doc.add_next_tick_callback(endclear)
+	sys.paused = True
+	doc.add_next_tick_callback(refresher)
 
 ICbuttons = mod.RadioGroup(labels=["Random", "Thermal", "ConstE"], active=0)
 currentICtext = [ics.IC_kwargs(label) for label in ICbuttons.labels]
@@ -313,64 +305,62 @@ ICbuttons.on_change("active", ICbuttonhandler)
 
 ## clearstream
 def clearstream():
-	global clearing
+	streamdata.data = {k: [np.nan] for k in streamdata.data.keys()}
 	streamdata.data = {k: [] for k in streamdata.data.keys()}
 	for i in range(len(gasdata)):
 		gasdata[i].data = dict(x=[],y=[])
-	clearing = True
 
-## endclear
-def endclear():
-	global clearing
-	clearing = False
+## refresher
+def refresher(ticks=0):
+	doc.add_next_tick_callback(refresh)
 
 ## refresh
 def refresh():
-	global frame
-	frame = 0
+	global buff_go, buff_t
 	with lock:
 		for i in range(len(sys.gases)):
-			np.copyto(buff_x[i], sys.gases[i].xy[0])
-			np.copyto(buff_y[i], sys.gases[i].xy[1])
+			buff_x = [gas.xy[0] for gas in sys.gases]
+			buff_y = [gas.xy[1] for gas in sys.gases]
+			buff_t = sys.t
 			buff_E[i] = sys.gases[i].E()
 			buff_T[i] = sys.gases[i].T()
 			buff_S[i] = sys.gases[i].dS()
 	for i in range(len(sys.gases)):
 		dots[i].glyph.radius = sys.gases[i].r0
-	sys.set_rate(10.**rateval.value)
-	sys.set_dt(10.**dtval.value)
-	sys.gases[0].set_g(gmax - gval.value)
 	if True:
-		## helps with clearing due to side effects
-		rateval.value = np.log10(sys.rate)
-		dtval.value = np.log10(sys.dt)
-		gval.value = gsliderval(sys.gases[0].g)
+		sys.set_rate(10.**rateval.value)
+		sys.set_dt(10.**dtval.value)
+		sys.gases[0].set_g(gmax - gval.value)
+	rateval.value = np.log10(sys.rate)
+	dtval.value = np.log10(sys.dt)
+	gval.value = gsliderval(sys.gases[0].g)
 	with lock:
 		for i in range(len(sys.gases)):
 			gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
+		buff_go = 1
+	sys.paused = ispaused
 
 ## update loop
 frame = 0
 skip = 6
-clearing = False
 def update():
-	if clearing or sys.paused:
-		return
 	global frame
-	with lock:
-		for i in range(len(sys.gases)):
-			gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
-		if frame%skip==0:
-			streamdata.stream(
-				dict(
-					t = [buff_t], 
-					E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
-					T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
-					S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
-					St = [np.nansum(buff_S)],
-				),
-			rollover=500)
-	frame += 1
+	if not sys.paused:
+		with lock:
+			if buff_go==1:
+				for i in range(len(sys.gases)):
+					gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
+				if frame%skip==0:
+					streamdata.stream(
+						dict(
+							t = [buff_t], 
+							E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
+							T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
+							S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
+							St = [np.nansum(buff_S)],
+						),
+					rollover=500)
+				frame += 1
 
 ## layouts
 controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))
