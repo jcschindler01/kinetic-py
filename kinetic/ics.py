@@ -47,12 +47,19 @@ def constE(gas, E=1):
 	return np.stack([x,y]), np.stack([vx,vy])
 
 
-ICX = dict(Thermal=thermal, Random=random, ConstE=constE)
+ICX = dict(Thermal=thermal, Random=random, ConstE=constE, Default=random)
 
 def IC_kwargs(ic):
-	if isinstance(ic,str):
-		ic = ICX[ic]
-	s = "\n".join([label + get_kwargs(ic) for label in ["0: ", "c: ", "h: "]])
+	if ic=="Default":
+		s = "\n".join([
+					"c: lr=[], bt=[], v=1",
+					"0: lr=[0,.5], bt=[1,2], v=2",
+					"h: lr=[], bt=[], v=4",
+				])
+	else:
+		if isinstance(ic,str):
+			ic = ICX[ic]
+		s = "\n".join([label + get_kwargs(ic) for label in ["c: ", "0: ", "h: "]])
 	return s
 
 def IC_get(ic, s):
@@ -63,8 +70,8 @@ def IC_get(ic, s):
 		ic = ICX[ic]
 	##
 	IC = dict(
-		ic   = lambda gas:  ic(gas, **args[0]),
-		icc  = lambda gas:  ic(gas, **args[1]),
+		icc  = lambda gas:  ic(gas, **args[0]),
+		ic   = lambda gas:  ic(gas, **args[1]),
 		ich  = lambda gas:  ic(gas, **args[2]),
 		)
 	return IC

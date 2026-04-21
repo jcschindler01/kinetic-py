@@ -216,7 +216,7 @@ def resethandler():
 	doc.add_next_tick_callback(refresher)
 reset.on_click(resethandler)
 
-checkboxes = mod.CheckboxGroup(labels=["Lock Aspect"], active=[0], align="end")
+checkboxes = mod.CheckboxGroup(labels=["Lock Aspect", "Regen Rate"], active=[0], align="end")
 def checkhandler(attr, old, new): 
 	if 0 in new: 
 		lock_aspect()
@@ -273,26 +273,25 @@ paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), r
 regen = mod.Button(label="Regenerate")
 
 def regenhandler():
+	global sys, buff_go, buff_x, buff_y, ispaused
 	with lock:
 		buff_go = 0
-	global ispaused
 	ispaused = sys.paused
 	sys.paused = True
 	clearstream()
 	doc.add_next_tick_callback(clearstream)
-	doc.add_next_tick_callback(regenerate)
-regen.on_click(regenhandler)
-
-def regenerate():
-	global sys
 	IC = ICbuttons.labels[ICbuttons.active]
 	params.update(dicts(paraminputs.value))
 	params.update(ics.IC_get(IC, s=ICparams.value))
-	sys = hotcold(params)
-	sys.paused = True
+	with lock:
+		sys = hotcold(params)
+		sys.paused = True
+		buff_x = [np.array(gas.xy[0], dtype='float64', order='C') for gas in sys.gases]
+		buff_y = [np.array(gas.xy[1], dtype='float64', order='C') for gas in sys.gases]
 	doc.add_next_tick_callback(refresher)
+regen.on_click(regenhandler)
 
-ICbuttons = mod.RadioGroup(labels=["Random", "Thermal", "ConstE"], active=0)
+ICbuttons = mod.RadioGroup(labels=["Default", "Random", "Thermal", "ConstE"], active=0)
 currentICtext = [ics.IC_kwargs(label) for label in ICbuttons.labels]
 ICparams  = mod.TextAreaInput(value=currentICtext[ICbuttons.active], rows=4, cols=35, stylesheets=[paramstyle])
 ICoptions = RR(ICbuttons, ICparams)
@@ -319,15 +318,15 @@ def refresh():
 	global buff_go, buff_t
 	with lock:
 		for i in range(len(sys.gases)):
-			buff_x = [gas.xy[0] for gas in sys.gases]
-			buff_y = [gas.xy[1] for gas in sys.gases]
+			np.copyto(buff_x[i], sys.gases[i].xy[0])
+			np.copyto(buff_y[i], sys.gases[i].xy[1])
 			buff_t = sys.t
 			buff_E[i] = sys.gases[i].E()
 			buff_T[i] = sys.gases[i].T()
 			buff_S[i] = sys.gases[i].dS()
 	for i in range(len(sys.gases)):
 		dots[i].glyph.radius = sys.gases[i].r0
-	if True:
+	if 1 not in checkboxes.active:
 		sys.set_rate(10.**rateval.value)
 		sys.set_dt(10.**dtval.value)
 		sys.gases[0].set_g(gmax - gval.value)
