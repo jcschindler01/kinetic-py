@@ -1,16 +1,18 @@
 
-
 import numpy as np
+import threading
+import time
+
 from bokeh.plotting import figure, curdoc, show, save
 from bokeh.models import ColumnDataSource
 from bokeh.models import Column as CC
 from bokeh.models import Row as RR
 import bokeh.models as mod
 from bokeh.layouts import layout
+
 from kinetic import hotcold, ics
 from kinetic.helpers import *
-import threading
-import time
+
 
 #################
 ## Physics
@@ -55,7 +57,7 @@ buff_S = [gas.dS() for gas in sys.gases]
 
 ## physics loop
 def sys_live(tmax=1000):
-	global sys, buff_t, buff_E
+	global buff_t
 	while sys.t < tmax:
 		time.sleep(sys.dt/sys.rate)
 		if not sys.paused:
@@ -201,10 +203,23 @@ pause.on_click(pausehandler)
 
 reset = mod.Button(label="Reset")
 def resethandler():
-	global sys
-	sys.reset()
-	refresh()
+	global ispaused
+	ispaused = sys.paused
+	sys.paused = True
+	clearstream()
+	doc.add_next_tick_callback(clearstream)
+	doc.add_next_tick_callback(resetchain)
 reset.on_click(resethandler)
+
+def resetchain():
+	""" Waits until next tick to add next tick callback. """
+	doc.add_next_tick_callback(resetter)
+
+def resetter():
+	sys.reset()
+	sys.paused = ispaused
+	doc.add_next_tick_callback(refresh)
+	doc.add_next_tick_callback(endclear)
 
 checkboxes = mod.CheckboxGroup(labels=["Lock Aspect"], active=[0], align="end")
 def checkhandler(attr, old, new): 
@@ -251,30 +266,6 @@ yzoom.on_change("value", yzoomhandler)
 
 regentext = CC(mod.Spacer(height=5), mod.Div(text="<b>Regenerate:</b>", height=10))
 
-regen = mod.Button(label="Regenerate")
-def regenhandler():
-	global frame, params, sys, buff_x, buff_y, buff_E, buff_T, buff_S
-	ispaused = sys.paused
-	params.update(dicts(paraminputs.value))
-	IC = ICbuttons.labels[ICbuttons.active]
-	params.update(ics.IC_get(IC, s=ICparams.value))
-	sys = hotcold(params)
-	with lock:
-		buff_x = [gas.xy[0] for gas in sys.gases]
-		buff_y = [gas.xy[1] for gas in sys.gases]
-		buff_E = [gas.E() for gas in sys.gases]
-		buff_T = [gas.T() for gas in sys.gases]
-		buff_S = [gas.S() for gas in sys.gases]
-	if ispaused: 
-		sys.pause()
-	for i in range(len(sys.gases)):
-		dots[i].glyph.radius = sys.gases[i].r0
-	streamdata.data = {k: [] for k in streamdata.data.keys()}
-	resethandler()
-	frame = 0
-regen.on_click(regenhandler)
-
-
 paramstyle = mod.InlineStyleSheet(css="""
 .bk-input {
     font-family: "Courier New", monospace !important;
@@ -282,7 +273,32 @@ paramstyle = mod.InlineStyleSheet(css="""
     white-space: nowrap;
 }
 """)
-paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), rows=6, cols=44, stylesheets=[paramstyle])
+paraminputs = mod.TextAreaInput(title="params = ", value=param_inputs(params), rows=7, cols=44, stylesheets=[paramstyle])
+
+regen = mod.Button(label="Regenerate")
+
+def regenhandler():
+	global ispaused 
+	ispaused = sys.paused
+	sys.paused = True
+	clearstream()
+	doc.add_next_tick_callback(clearstream)
+	doc.add_next_tick_callback(regenchain)
+regen.on_click(regenhandler)
+
+def regenchain():
+	""" Waits until next tick to add next tick callback. """
+	doc.add_next_tick_callback(regenerate)
+
+def regenerate():
+	global sys
+	IC = ICbuttons.labels[ICbuttons.active]
+	params.update(dicts(paraminputs.value))
+	params.update(ics.IC_get(IC, s=ICparams.value))
+	sys = hotcold(params)
+	sys.paused = ispaused
+	doc.add_next_tick_callback(refresh)
+	doc.add_next_tick_callback(endclear)
 
 ICbuttons = mod.RadioGroup(labels=["Random", "Thermal", "ConstE"], active=0)
 currentICtext = [ics.IC_kwargs(label) for label in ICbuttons.labels]
@@ -295,40 +311,66 @@ def ICbuttonhandler(attr, old, new):
 ICparams.on_change("value", ICtexthandler)
 ICbuttons.on_change("active", ICbuttonhandler)
 
-## update loop
-frame = 0
-skip = 6
-def update():
-	global sys, frame
-	if not sys.paused:
-		with lock:
-			for i in range(len(sys.gases)):
-				gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
-			if frame%skip==0:
-				streamdata.stream(
-					dict(
-						t = [buff_t], 
-						E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
-						T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
-						S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
-						St = [np.nansum(buff_S)],
-					),
-				rollover=500)
-	frame += 1	
+## clearstream
+def clearstream():
+	global clearing
+	streamdata.data = {k: [] for k in streamdata.data.keys()}
+	for i in range(len(gasdata)):
+		gasdata[i].data = dict(x=[],y=[])
+	clearing = True
+
+## endclear
+def endclear():
+	global clearing
+	clearing = False
 
 ## refresh
 def refresh():
-	global sys, dots, streamdata
+	global frame
+	frame = 0
 	with lock:
 		for i in range(len(sys.gases)):
 			np.copyto(buff_x[i], sys.gases[i].xy[0])
 			np.copyto(buff_y[i], sys.gases[i].xy[1])
+			buff_E[i] = sys.gases[i].E()
+			buff_T[i] = sys.gases[i].T()
+			buff_S[i] = sys.gases[i].dS()
+	for i in range(len(sys.gases)):
+		dots[i].glyph.radius = sys.gases[i].r0
+	sys.set_rate(10.**rateval.value)
+	sys.set_dt(10.**dtval.value)
+	sys.gases[0].set_g(gmax - gval.value)
+	if True:
+		## helps with clearing due to side effects
+		rateval.value = np.log10(sys.rate)
+		dtval.value = np.log10(sys.dt)
+		gval.value = gsliderval(sys.gases[0].g)
+	with lock:
+		for i in range(len(sys.gases)):
 			gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
-	rateval.value = np.log10(sys.rate)
-	dtval.value = np.log10(sys.dt)
-	gval.value = gsliderval(sys.gases[0].g)
-	streamdata.data = {k: [] for k in streamdata.data.keys()}
 
+## update loop
+frame = 0
+skip = 6
+clearing = False
+def update():
+	if clearing or sys.paused:
+		return
+	global frame
+	with lock:
+		for i in range(len(sys.gases)):
+			gasdata[i].data = dict(x=buff_x[i], y=buff_y[i])
+		if frame%skip==0:
+			streamdata.stream(
+				dict(
+					t = [buff_t], 
+					E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
+					T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
+					S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
+					St = [np.nansum(buff_S)],
+				),
+			rollover=500)
+	frame += 1
 
 ## layouts
 controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))

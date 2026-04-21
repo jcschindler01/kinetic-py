@@ -43,7 +43,7 @@ def extent(sys):
 
 def param_inputs(params):
 	keys = ["N","m","r","g"]
-	gases = ["", "c", "h"]
+	gases = ["c", "", "h"]
 	s = ""
 	for key in keys:
 		for gas in gases:
@@ -51,6 +51,7 @@ def param_inputs(params):
 			s1 = "%s, "%(params[s0])
 			s += s0.ljust(2) + " = " + s1.ljust(8)
 		s+="\n"
+	s+="\n" 
 	for key in ["mu"]:
 		s0 = "mu"
 		s1 = "%s, "%(params["mu"])
