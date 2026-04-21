@@ -8,6 +8,7 @@ from bokeh.models import ColumnDataSource
 from bokeh.models import Column as CC
 from bokeh.models import Row as RR
 import bokeh.models as mod
+import bokeh.palettes as palettes
 from bokeh.layouts import layout
 
 from kinetic import hotcold, ics
@@ -24,11 +25,11 @@ params = dict(
 		dt=0.005,
 		rate=1,
 		## wall
-		mu=0.9,
+		mu=1,
 		## balls
 		N =500, m =1  , r =.01, g =1,
-		Nh=50, mh=100, rh=.02, gh=0,
-		Nc=50, mc=100, rc=.02, gc=0,
+		Nh=0, mh=100, rh=.02, gh=0,
+		Nc=0, mc=100, rc=.02, gc=0,
 		## bounds
 		b0=dict(t=99, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),
@@ -54,11 +55,12 @@ buff_y = [np.array(gas.xy[1], dtype='float64', order='C') for gas in sys.gases]
 buff_E = [gas.E() for gas in sys.gases]
 buff_T = [gas.T() for gas in sys.gases]
 buff_S = [gas.dS() for gas in sys.gases]
+buff_g = 1.*sys.gases[0].g
 buff_go = 1
 
 ## physics loop
 def sys_live(tmax=1000):
-	global buff_t
+	global buff_t, buff_g
 	while sys.t < tmax:
 		time.sleep(sys.dt/sys.rate)
 		if not sys.paused:
@@ -78,6 +80,7 @@ def sys_live(tmax=1000):
 						buff_E[i] = 1.*E[i]
 						buff_T[i] = 1.*T[i]
 						buff_S[i] = 1.*S[i]
+						buff_g = 1.*sys.gases[0].g
 	print(flush=True)
 
 ## start thread
@@ -114,6 +117,7 @@ streamdata = ColumnDataSource(dict(
 	Sc = [buff_S[1]], 
 	Sh = [buff_S[2]],
 	St = [np.nansum(buff_S)],
+	g  = [buff_g],
 	))
 
 ## main plot
@@ -191,6 +195,39 @@ energy.line(x="t", y="Ec", source=streamdata, color="blue")
 energy.line(x="t", y="Eh", source=streamdata, color="red")
 energy.y_range.min_interval = 5
 
+gmin, gmax = 0, 5
+state = figure(
+	title = "State",
+	width = 150,
+	height = 150,
+	x_range = (-1,10),
+	output_backend = "canvas",
+	toolbar_location = None,
+	)
+state.xaxis.ticker = mod.SingleIntervalTicker(interval=1)
+state.x_range = mod.Range1d(gmin-.5, gmax+.5, bounds=(gmin-.5, gmax+.5))
+state.y_range = mod.DataRange1d(start=0, range_padding=1)
+state.xaxis.visible = False
+state.yaxis.visible = False
+state.add_layout(mod.Title(text="g", text_font_style="normal", align="center"), "below")
+state.add_layout(mod.Title(text="E", text_font_style="normal", align="center"), "left")
+state.line(x="g", y="E" , source=streamdata, color="deepskyblue", line_width=4)
+state.scatter(x="g", y="E", source=streamdata, view=mod.CDSView(filter=mod.IndexFilter([-1])), 
+             size=12, fill_color="black", line_color=None)
+
+maxentmini = figure(
+	title = "Ent",
+	width = 50,
+	height = 150,
+	output_backend = "canvas",
+	toolbar_location = None,
+	)
+maxentmini.xaxis.visible = False
+maxentmini.yaxis.visible = False
+maxentmini.line(x="t", y="St", source=streamdata, color="black")
+maxentmini.y_range.min_interval = 100
+maxentmini.lod_threshold = 100
+
 for p in [maxent, temperature, energy]:
     p.min_border_left = 60
     p.min_border_right = 20
@@ -222,7 +259,6 @@ def checkhandler(attr, old, new):
 		lock_aspect()
 checkboxes.on_change("active", checkhandler)
 
-gmin, gmax = 0, 5
 gvalstyle = mod.InlineStyleSheet( # fixes broken Bokeh vertical slider
 	css="""
 	.bk-slider { width: 50px; }
@@ -317,10 +353,11 @@ def refresher(ticks=0):
 def refresh():
 	global buff_go, buff_t
 	with lock:
+		buff_t = sys.t
+		buff_g = sys.gases[0].g
 		for i in range(len(sys.gases)):
 			np.copyto(buff_x[i], sys.gases[i].xy[0])
 			np.copyto(buff_y[i], sys.gases[i].xy[1])
-			buff_t = sys.t
 			buff_E[i] = sys.gases[i].E()
 			buff_T[i] = sys.gases[i].T()
 			buff_S[i] = sys.gases[i].dS()
@@ -353,6 +390,7 @@ def update():
 					streamdata.stream(
 						dict(
 							t = [buff_t], 
+							g = [buff_g],
 							E = [buff_E[0]], Ec = [buff_E[1]], Eh = [buff_E[2]],
 							T = [buff_T[0]], Tc = [buff_T[1]], Th = [buff_T[2]],
 							S = [buff_S[0]], Sc = [buff_S[1]], Sh = [buff_S[2]],
@@ -361,10 +399,12 @@ def update():
 					rollover=500)
 				frame += 1
 
+## spacers
+statebump = mod.Spacer(width=40)
+
 ## layouts
 controls = RR(gval, CC(RR(pause,reset,regen,checkboxes), rateval, dtval, yzoom, paraminputs, ICoptions))
-plots = CC(maxent,temperature,energy)
-# plots = CC()
+plots = CC(maxent,temperature,energy,RR(statebump,state,maxentmini))
 
 ## add roots
 doc.add_root(RR(main,plots,controls))
