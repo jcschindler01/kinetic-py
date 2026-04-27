@@ -45,7 +45,7 @@ def COLLIDE(xy, vxy, r0):
 				dvx = vx[j] - vx[i]
 				dvy = vy[j] - vy[i]
 				## conditions
-				isclose = np.sqrt(dx**2 + dy**2) < 2*r0
+				isclose = dx**2 + dy**2 < 4*r0**2
 				isapproaching = dx*dvx + dy*dvy < 0
 				if isclose and isapproaching:
 					## relative
