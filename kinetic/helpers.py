@@ -30,7 +30,7 @@ def bounds(gas):
 		if isnum(gas.walls[key]):
 			b[key] = 1.*gas.walls[key]
 		else:
-			b[key] = 1.*gas.walls[key].z
+			b[key] = 1.*gas.walls[key].loc
 	return b
 
 def extent(sys):
@@ -52,9 +52,9 @@ def param_inputs(params):
 			s += s0.ljust(2) + " = " + s1.ljust(8)
 		s+="\n"
 	s+="\n" 
-	for key in ["mu"]:
-		s0 = "mu"
-		s1 = "%s, "%(params["mu"])
+	for key in ["M"]:
+		s0 = "M"
+		s1 = "%s, "%(params["M"])
 		s += s0.ljust(2) + " = " + s1.ljust(8)
 	return s
 

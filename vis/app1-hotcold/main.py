@@ -25,13 +25,13 @@ params = dict(
 		dt=0.005,
 		rate=1,
 		## wall
-		mu=1,
+		M=1e1,
 		## balls
-		N =500, m =1  , r =.01, g =1,
-		Nh=0, mh=100, rh=.02, gh=0,
-		Nc=0, mc=100, rc=.02, gc=0,
+		N =500, m=1, r =.01, g=1,
+		Nh=200, mh=10, rh=.02, gh=0,
+		Nc=0, mc=1, rc=.02, gc=0,
 		## bounds
-		b0=dict(t=99, b=0,   r=1, l=0),
+		b0=dict(t=1, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),
 		bc=dict(t=1 , l=-.5, b=0, r=0),
 		## ics
@@ -64,7 +64,7 @@ def sys_live(tmax=1000):
 	while sys.t < tmax:
 		time.sleep(sys.dt/sys.rate)
 		if not sys.paused:
-			# sys.liveprint()
+			sys.liveprint()
 			sys.evolve()
 			t  = 1.*sys.t
 			E = [gas.E() for gas in sys.gases]
@@ -88,7 +88,7 @@ golive = threading.Thread(target=sys_live, daemon=True)
 golive.start()
 
 ## uncomment to force thread to finish
-# golive.join()
+golive.join()
 
 #################
 #################

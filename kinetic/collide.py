@@ -5,23 +5,24 @@ from kinetic.helpers import *
 
 
 
-def wc(gas,w,z=1,pm=1):
+def wc(gas,wall,xy01=0,pm=1):
+	"""
+	xy01 = 0 for horizontal wall or 1 for vertical wall
+	pm = 1 for "ball coord > wall coord" ie bottom or left wall, else -1
+	"""
 	##
-	y, vy, m, y0, wE0, mu = 1.*gas.xy[z], 1.*gas.vxy[z], 1.*gas.m, 1.*w.z, 1.*w.E, 1.*w.mu
+	z, v, m, Z, V, M = 1.*gas.xy[xy01], 1.*gas.vxy[xy01], 1.*gas.m, 1.*wall.loc, 1.*wall.v, 1.*wall.M
 	##
-	mask = (pm*(y-y0) <= 0)
-	##
-	if len(y[mask])>0:
-		bE0 = 0.5*m*vsq(vy[mask]) if len(y[mask])>0 else 1
-		E0 = bE0 + wE0
-		bE1, wE1 = mu*E0, (1.-mu)*E0
-		##
-		vy[mask] = pm * np.sqrt(bE1/bE0) * np.abs(vy[mask])
-		BE1 = 0.5*m*vsq(vy[mask])
-		##
-		return 1.*vy, 1.*wE1
-	else:
-		return 1.*vy, 1.*wE0
+	gas.vxy[xy01], wall.V = WALLBOUNCE(m,v,z,M,V,Z,pm)
+
+@njit
+def WALLBOUNCE(m,v,z,M,V,Z,pm):
+	for i in range(len(v)):
+		if pm*(z[i]-Z)<=0 and pm*(v[i]-V)<0:
+			V1   = v[i]*(2*m)/(m+M) + V*(M-m)/(m+M)
+			v[i] = v[i]*(m-M)/(m+M) + V*(2*M)/(m+M)
+			V    = V1
+	return v, V
 
 
 
