@@ -161,6 +161,11 @@ maxent = figure(
 	frame_height = 100,
 	output_backend = "canvas",
 	toolbar_location = None,
+	tools = [
+		mod.PanTool(),
+		mod.WheelZoomTool(modifiers="ctrl", maintain_focus=False),
+		mod.ResetTool(),
+		]
 	)
 maxent.xaxis.visible = False
 maxent.line(x="t", y="S" , source=streamdata, color="green")
@@ -175,6 +180,11 @@ temperature = figure(
 	frame_height = 100,
 	output_backend = "canvas",
 	toolbar_location = None,
+	tools = [
+		mod.PanTool(),
+		mod.WheelZoomTool(modifiers="ctrl", maintain_focus=False),
+		mod.ResetTool(),
+		]
 	)
 temperature.xaxis.visible = False
 temperature.line(x="t", y="T" , source=streamdata, color="green")
@@ -188,6 +198,11 @@ energy = figure(
 	frame_height = 100,
 	output_backend = "canvas",
 	toolbar_location = None,
+	tools = [
+		mod.PanTool(),
+		mod.WheelZoomTool(modifiers="ctrl", maintain_focus=False),
+		mod.ResetTool(),
+		]
 	)
 energy.xaxis.visible = False
 energy.line(x="t", y="E" , source=streamdata, color="green")
@@ -203,7 +218,13 @@ state = figure(
 	x_range = (-1,10),
 	output_backend = "canvas",
 	toolbar_location = None,
+	tools = [
+		mod.PanTool(),
+		mod.WheelZoomTool(modifiers="ctrl", maintain_focus=False),
+		mod.ResetTool(),
+		]
 	)
+state.toolbar.logo = None
 state.xaxis.ticker = mod.SingleIntervalTicker(interval=1)
 state.x_range = mod.Range1d(gmin-.5, gmax+.5, bounds=(gmin-.5, gmax+.5))
 state.y_range = mod.DataRange1d(start=0, range_padding=1)
