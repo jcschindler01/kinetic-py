@@ -11,23 +11,29 @@ def wc(gas,wall,xy01=0,pm=1):
 	pm = 1 for "ball coord > wall coord" ie bottom or left wall, else -1
 	"""
 	##
-	z, v, m, Z, V, M = 1.*gas.xy[xy01], 1.*gas.vxy[xy01], 1.*gas.m, 1.*wall.loc, 1.*wall.v, 1.*wall.M
+	z, v, Z = 1.*gas.xy[xy01], 1.*gas.vxy[xy01], 1.*wall.loc
 	##
-	gas.vxy[xy01], wall.V = WALLBOUNCE(m,v,z,M,V,Z,pm)
+	if wall.c==0:
+		return wc0(z,v,Z,pm,gas.r0), wall.E
+	##
+	else:
+		mask = np.logical_and(pm*(z-Z)<=gas.r0, pm*v<=0)
+		vc = v[mask]
+		wall.E += 0.5*gas.m*np.sum(vc**2)
+		EC = np.random.exponential(scale=wall.T(), size=len(vc))
+		E0 = np.sum(EC)
+		if E0 > wall.E:
+			EC = EC * wall.E / E0
+			E0 = wall.E
+		wall.E -= E0
+		v[mask] = pm*np.sqrt(2.*EC/gas.m)
+		return v, wall.E
 
-@njit
-def WALLBOUNCE(m,v,z,M,V,Z,pm):
-	for i in range(len(v)):
-		if pm*(z[i]-Z)<=0 and pm*(v[i]-V)<0:
-			V1   = v[i]*(2*m)/(m+M) + V*(M-m)/(m+M)
-			v[i] = v[i]*(m-M)/(m+M) + V*(2*M)/(m+M)
-			V    = V1
-	return v, V
 
 
 
-def wc0(y,vy,y0,pm=1):
-	mask = (pm*(y-y0) <= 0) & (pm*vy < 0)
+def wc0(y,vy,y0,pm=1,r0=0):
+	mask = (pm*(y-y0) <= r0) & (pm*vy < 0)
 	vy[mask] *= -1
 	return vy
 

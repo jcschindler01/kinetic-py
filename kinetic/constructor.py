@@ -13,7 +13,7 @@ def hotcold(params):
 		dt=0.01,
 		rate=100,
 		## wall
-		M=1e9,
+		c=1,
 		## balls
 		N =500, m =1  , r =.01, g =1,
 		Nh=200, mh=100, rh=.02, gh=0,
@@ -43,7 +43,7 @@ def hotcold(params):
 	sys.gases = [main]
 	sys.walls = []
 
-	coldwall = wall(loc=p.bc['r'], M=p.M)
+	coldwall = wall(loc=p.bc['r'], c=p.c)
 	cold = species(N=p.Nc, m=p.mc, r0=p.rc, g=p.gc, walls=dict(p.bc,r=coldwall), sty=p.sc)
 	cold.xy, cold.vxy = p.icc(cold)
 
@@ -51,13 +51,18 @@ def hotcold(params):
 	sys.gases += [cold,]
 	main.walls.update(l=coldwall)
 
-	hotwall  = wall(loc=p.bh['l'], M=p.M)
+	hotwall  = wall(loc=p.bh['l'], c=p.c)
 	hot  = species(N=p.Nh, m=p.mh, r0=p.rh, g=p.gh, walls=dict(p.bh,l=hotwall), sty=p.sh)
 	hot.xy,  hot.vxy  = p.ich(hot)
 
 	sys.walls += [hotwall,]
 	sys.gases += [hot,]
 	main.walls.update(r=hotwall)
+
+	if p.Nc==0:
+		coldwall.c = 0.
+	if p.Nh==0:
+		hotwall.c = 0.
 
 	sys.constructor = hotcold
 	sys.constructor_params = params

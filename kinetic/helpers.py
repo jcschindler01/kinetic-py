@@ -52,9 +52,9 @@ def param_inputs(params):
 			s += s0.ljust(2) + " = " + s1.ljust(8)
 		s+="\n"
 	s+="\n" 
-	for key in ["M"]:
-		s0 = "M"
-		s1 = "%s, "%(params["M"])
+	for key in ["c"]:
+		s0 = "c"
+		s1 = "%s, "%(params["c"])
 		s += s0.ljust(2) + " = " + s1.ljust(8)
 	return s
 

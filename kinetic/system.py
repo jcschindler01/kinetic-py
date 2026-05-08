@@ -6,12 +6,12 @@ from kinetic.helpers import *
 from kinetic.collide import *
 
 class wall:
-	def __init__(self, loc, M=1e9):
+	def __init__(self, loc, c=0):
 		self.loc = 1.*loc
-		self.M = 1.*M
-		self.v = 0.0
-	def E(self):
-		return 0.5*self.M*self.v**2
+		self.c = 1.*c
+		self.E = 0.0
+	def T(self):
+		return self.E/self.c
 
 class species:
 
@@ -43,24 +43,24 @@ class species:
 		"""
 		## bottom
 		if isnum(self.walls["b"]):
-			self.vxy[1] = wc0(self.xy[1], self.vxy[1], self.walls["b"], pm=1)
+			self.vxy[1] = wc0(self.xy[1], self.vxy[1], self.walls["b"], pm=1, r0=self.r0)
 		else:
-			wc(self,self.walls["b"],xy01=1,pm=1)	
+			self.vxy[1], self.walls["b"].E = wc(self,self.walls["b"],xy01=1,pm=1)	
 		## left
 		if isnum(self.walls["l"]):
-			self.vxy[0] = wc0(self.xy[0], self.vxy[0], self.walls["l"], pm=1)
+			self.vxy[0] = wc0(self.xy[0], self.vxy[0], self.walls["l"], pm=1, r0=self.r0)
 		else:
-			wc(self,self.walls["l"],xy01=0,pm=1)
+			self.vxy[0], self.walls["l"].E = wc(self,self.walls["l"],xy01=0,pm=1)
 		## right
 		if isnum(self.walls["r"]):
-			self.vxy[0] = wc0(self.xy[0], self.vxy[0], self.walls["r"], pm=-1)
+			self.vxy[0] = wc0(self.xy[0], self.vxy[0], self.walls["r"], pm=-1, r0=self.r0)
 		else:
-			wc(self,self.walls["r"],xy01=0,pm=-1)
+			self.vxy[0], self.walls["r"].E = wc(self,self.walls["r"],xy01=0,pm=-1)
 		## top
 		if isnum(self.walls["t"]):
-			self.vxy[1] = wc0(self.xy[1], self.vxy[1], self.walls["t"], pm=-1)
+			self.vxy[1] = wc0(self.xy[1], self.vxy[1], self.walls["t"], pm=-1, r0=self.r0)
 		else:
-			wc(self,self.walls["t"],xy01=1,pm=-1)
+			self.vxy[1], self.walls["t"].E = wc(self,self.walls["t"],xy01=1,pm=-1)
 
 	def collide(self):
 		"""
@@ -134,9 +134,13 @@ class system:
 		self.t += self.dt
 		self.n += 1
 
+	def E(self):
+		return np.sum([gas.E() for gas in self.gases]+[wall.E for wall in self.walls])
+
 	def liveprint(self):
 		print("\rn = %8d, t = %8.3f, "%(self.n,self.t), end="")
 		print("T = ("+", ".join(["%6.2f"%gas.T() for gas in self.gases])+")", end="")
-		print("\nEW = ("+", ".join(["%s"%wall.v for wall in self.walls])+")", end="", flush=True)
+		print("\nEW = ("+", ".join(["%6.2f"%wall.E for wall in self.walls])+")", end="", flush=True)
+		print("\nESYS = %6.2f"%(self.E()), end="", flush=True)
 
 
