@@ -28,8 +28,8 @@ params = dict(
 		c=100,
 		## balls
 		N =500, m=1, r =.01, g=1,
-		Nh=200, mh=10, rh=.02, gh=0,
-		Nc=200, mc=10, rc=.02, gc=0,
+		Nh=0, mh=10, rh=.02, gh=0,
+		Nc=0, mc=10, rc=.02, gc=0,
 		## bounds
 		b0=dict(t=99, b=0,   r=1, l=0),
 		bh=dict(t=1 , r=1.5, b=0, l=1),
@@ -210,7 +210,7 @@ energy.line(x="t", y="Ec", source=streamdata, color="blue")
 energy.line(x="t", y="Eh", source=streamdata, color="red")
 energy.y_range.min_interval = 5
 
-gmin, gmax = 0, 5
+gmin, gmax = 0, 2
 state = figure(
 	title = "State",
 	width = 150,

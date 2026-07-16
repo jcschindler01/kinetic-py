@@ -16,8 +16,8 @@ def hotcold(params):
 		c=1,
 		## balls
 		N =500, m =1  , r =.01, g =1,
-		Nh=200, mh=100, rh=.02, gh=0,
-		Nc=200, mc=100, rc=.02, gc=0,
+		Nh=0, mh=100, rh=.02, gh=0,
+		Nc=0, mc=100, rc=.02, gc=0,
 		## bounds
 		b0=dict(b=0, t=100, l=0  , r=1  ),
 		bh=dict(b=0, t=1  , l=1  , r=1.5),
