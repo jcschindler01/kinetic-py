@@ -133,6 +133,7 @@ main = figure(
 		mod.UndoTool(),
 		mod.RedoTool(),
 		mod.ResetTool(),
+		mod.SaveTool(),
 		]
 	)
 
@@ -210,7 +211,7 @@ energy.line(x="t", y="Ec", source=streamdata, color="blue")
 energy.line(x="t", y="Eh", source=streamdata, color="red")
 energy.y_range.min_interval = 5
 
-gmin, gmax = 0, 2
+gmin, gmax = 0, 10
 state = figure(
 	title = "State",
 	width = 150,
