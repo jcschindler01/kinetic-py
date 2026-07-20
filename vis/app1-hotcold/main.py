@@ -349,7 +349,7 @@ def regenhandler():
 	doc.add_next_tick_callback(refresher)
 regen.on_click(regenhandler)
 
-ICbuttons = mod.RadioGroup(labels=["Default", "Random", "Thermal", "ConstE"], active=0)
+ICbuttons = mod.RadioGroup(labels=[ "Demo", "Default", "Random", "Thermal", "ConstE"], active=0)
 currentICtext = [ics.IC_kwargs(label) for label in ICbuttons.labels]
 ICparams  = mod.TextAreaInput(value=currentICtext[ICbuttons.active], rows=4, cols=35, stylesheets=[paramstyle])
 ICoptions = RR(ICbuttons, ICparams)

@@ -46,8 +46,45 @@ def constE(gas, E=1):
 	vy = np.sin(2.*np.pi*theta)*v
 	return np.stack([x,y]), np.stack([vx,vy])
 
+def chain(gas):
+	##
+	lam = np.linspace(0,1,gas.N)
+	##
+	x = .5 * lam
+	y = x ** 2
+	vx = 0.3*np.exp(3 * x)
+	vy = 0.6*np.exp(3 * y)
+	##
+	xy  = np.stack([x,y])
+	vxy = np.stack([vx,vy])
+	##
+	return xy, vxy
 
-ICX = dict(Thermal=thermal, Random=random, ConstE=constE, Default=random)
+def circle(gas):
+	##
+	lam = np.linspace(0,1,gas.N)
+	##
+	x = 1.5 + 0.2*np.cos(2.*np.pi*lam)
+	y = 0.2*np.sin(2.*np.pi*lam)
+	vx = 0. + 0.* lam
+	vy = -.1 + 0.* lam
+	##
+	xy  = np.stack([x,y])
+	vxy = np.stack([vx,vy])
+	##
+	return xy, vxy
+
+def demo(gas, n=0):
+	if n==0:
+		return random(gas, lr=[0,.5], bt=[1,2], v=2)
+	if n==1:
+		return chain(gas)
+	if n==2:
+		return circle(gas)
+
+
+
+ICX = dict(Demo=demo, Thermal=thermal, Random=random, ConstE=constE, Default=random)
 
 def IC_kwargs(ic):
 	if ic=="Default":
